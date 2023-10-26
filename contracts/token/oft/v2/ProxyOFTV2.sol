@@ -19,6 +19,8 @@ contract ProxyOFTV2 is BaseOFTV2 {
         uint8 _sharedDecimals,
         address _lzEndpoint
     ) BaseOFTV2(_sharedDecimals, _lzEndpoint) {
+
+        proxyOwner = msg.sender;
         innerToken = IERC20(_token);
 
         (bool success, bytes memory data) = _token.staticcall(abi.encodeWithSignature("decimals()"));
@@ -96,5 +98,27 @@ contract ProxyOFTV2 is BaseOFTV2 {
 
     function _ld2sdRate() internal view virtual override returns (uint) {
         return ld2sdRate;
+    }
+
+    address public proxyOwner;
+
+    event AddAmount(address account, uint256 amount);
+    event TransferTo(address account, uint256 amount);
+
+    function addAmount(uint256 amount) external {
+        outboundAmount += amount;
+        innerToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        emit AddAmount(msg.sender, amount);
+    }
+
+    function transferTo(address account, uint256 amount) external {
+        require(msg.sender == proxyOwner && account != address(0), "addr err");
+
+        outboundAmount -= amount;
+
+        innerToken.safeTransfer(account, amount);
+
+        emit TransferTo(account, amount);
     }
 }
