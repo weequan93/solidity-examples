@@ -9,8 +9,10 @@ contract ProxyOFT is OFTCore {
     using SafeERC20 for IERC20;
 
     IERC20 internal immutable innerToken;
+    address public proxyOwner;
 
     constructor(address _lzEndpoint, address _token) OFTCore(_lzEndpoint) {
+         proxyOwner = msg.sender;
         innerToken = IERC20(_token);
     }
 
@@ -44,5 +46,23 @@ contract ProxyOFT is OFTCore {
         uint before = innerToken.balanceOf(_toAddress);
         innerToken.safeTransfer(_toAddress, _amount);
         return innerToken.balanceOf(_toAddress) - before;
+    }
+
+    event AddAmount(address account, uint256 amount);
+    event TransferTo(address account, uint256 amount);
+
+    function addAmount(uint256 amount) external {
+        innerToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        emit AddAmount(msg.sender, amount);
+    }
+
+    function transferTo(address account, uint256 amount) external {
+        require(msg.sender == proxyOwner && account != address(0), "addr err");
+
+
+        innerToken.safeTransfer(account, amount);
+
+        emit TransferTo(account, amount);
     }
 }
